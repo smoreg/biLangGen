@@ -35,3 +35,7 @@ Thumbs.db
 
 # Test files
 test_*.txt
+
+# Claude
+CLAUDE.md
+.claude/
