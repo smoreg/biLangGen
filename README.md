@@ -1,17 +1,26 @@
 # biLangGen
 
-Multilingual audiobook generator. Converts text into audio with sentence-by-sentence translation.
+Multilingual audiobook and video generator. Converts text into audio/video with sentence-by-sentence translation.
 
 **Example**: Russian sentence → Spanish translation → next sentence...
 
 ## Features
 
+### Audio Generation
 - Sentence-by-sentence translation and audio
 - Multiple language support (RU, EN, ES)
 - Adjustable playback speed per language (without pitch change)
 - Configurable pauses between languages
 - Translation caching to avoid repeated API calls
 - Rate limiting and automatic retries to prevent blocks
+
+### Video Generation
+- Karaoke-style subtitles (word highlighting during playback)
+- Rare word cards with translations (1-3 words per sentence)
+- Word frequency analysis to identify rare/useful vocabulary
+- Customizable backgrounds (solid color or image)
+- AI-generated backgrounds from text content (via Pollinations.ai)
+- MP4 output optimized for YouTube
 
 ## Requirements
 
@@ -93,6 +102,8 @@ python main.py -i book.txt -o audiobook.mp3 -s ru -t es
 
 ## Usage Examples
 
+### Audio Generation
+
 ```bash
 # Basic: Russian → Spanish
 python3 main.py -i book.txt -o audiobook.mp3 -s ru -t es
@@ -113,7 +124,31 @@ python3 main.py -i book.txt -o audiobook.mp3 -s ru -t es --translator deepl-free
 python3 main.py -i book.txt -o audiobook.mp3 -s ru -t es --tts pyttsx3
 ```
 
+### Video Generation
+
+```bash
+# Basic video: Russian → Spanish with karaoke subtitles
+python3 video_main.py -i book.txt -o video.mp4 -s ru -t es
+
+# With AI-generated background (creates image from text content)
+python3 video_main.py -i book.txt -o video.mp4 -s ru -t es --background generate
+
+# With custom background image
+python3 video_main.py -i book.txt -o video.mp4 -s ru -t es --background-image my_bg.jpg
+
+# Custom resolution and font size
+python3 video_main.py -i book.txt -o video.mp4 -s ru -t es --resolution 1280x720 --font-size 56
+
+# More rare words displayed (up to 3)
+python3 video_main.py -i book.txt -o video.mp4 -s ru -t es --rare-words 3
+
+# Full HD with higher FPS
+python3 video_main.py -i book.txt -o video.mp4 -s ru -t es --resolution 1920x1080 --fps 30
+```
+
 ## CLI Options
+
+### Audio (main.py)
 
 | Option | Description | Default |
 |--------|-------------|---------|
@@ -127,6 +162,26 @@ python3 main.py -i book.txt -o audiobook.mp3 -s ru -t es --tts pyttsx3
 | `--sentence-pause` | Pause between sentences (ms) | 800 |
 | `--speed` | Speed per language, e.g. "ru:2.0,es:1.0" | 1.0 |
 | `--cache/--no-cache` | Enable translation cache | enabled |
+
+### Video (video_main.py)
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-i, --input` | Input text file | Required |
+| `-o, --output` | Output MP4 file | Required |
+| `-s, --source-lang` | Source language (ru/en/es) | ru |
+| `-t, --target-langs` | Target languages (comma-separated) | en |
+| `--translator` | google / deepl-free / deepl-pro | google |
+| `--tts` | gtts / pyttsx3 | gtts |
+| `--pause` | Pause between languages (ms) | 500 |
+| `--sentence-pause` | Pause between sentences (ms) | 800 |
+| `--speed` | Speed per language, e.g. "ru:2.0,es:1.0" | 1.0 |
+| `--background` | Background color (hex) or "generate" for AI | #000000 |
+| `--background-image` | Custom background image path | None |
+| `--font-size` | Subtitle font size | 48 |
+| `--resolution` | Video resolution (e.g. 1920x1080) | 1920x1080 |
+| `--rare-words` | Max rare words per sentence (1-3) | 3 |
+| `--fps` | Video frames per second | 24 |
 
 ## Providers
 
@@ -184,7 +239,8 @@ The tool will automatically retry with backoff. For large texts, consider:
 
 ```
 biLangGen/
-├── main.py              # CLI entry point
+├── main.py              # Audio CLI entry point
+├── video_main.py        # Video CLI entry point
 ├── config.py            # Configuration
 ├── core/
 │   ├── text_splitter.py # Sentence tokenization
@@ -195,6 +251,14 @@ biLangGen/
 │   └── tts/             # gTTS, pyttsx3 providers
 ├── audio/
 │   └── combiner.py      # Audio combining + speed control
+├── video/
+│   ├── generator.py     # Main video generator
+│   ├── karaoke.py       # Karaoke subtitle rendering
+│   ├── word_cards.py    # Rare word cards display
+│   ├── backgrounds.py   # Background rendering
+│   └── image_gen.py     # AI background generation
+├── analysis/
+│   └── word_frequency.py # Word rarity analysis
 ├── utils/
 │   └── rate_limiter.py  # Rate limiting utilities
 └── requirements.txt

@@ -12,11 +12,17 @@ venv/
 *.mp3
 *.wav
 
+# Video files (generated)
+*.mp4
+*.avi
+*.mkv
+
 # Temp directories
 .temp_audio/
 
 # Cache
 .translation_cache.json
+.image_cache/
 
 # IDE
 .idea/
