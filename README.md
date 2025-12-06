@@ -13,21 +13,85 @@ Multilingual audiobook generator. Converts text into audio with sentence-by-sent
 - Translation caching to avoid repeated API calls
 - Rate limiting and automatic retries to prevent blocks
 
+## Requirements
+
+- Python 3.10+
+- ffmpeg (for audio processing)
+- Internet connection (for Google Translate and gTTS)
+
 ## Installation
 
+### macOS
+
 ```bash
+# Install Python (if not installed)
+brew install python
+
+# Install ffmpeg and rubberband (for speed control)
+brew install ffmpeg rubberband
+
 # Clone repository
 git clone https://github.com/smoreg/biLangGen.git
 cd biLangGen
 
-# Install dependencies
-pip install -r requirements.txt
-
-# System dependencies (macOS)
-brew install ffmpeg rubberband
+# Install Python dependencies
+pip3 install -r requirements.txt
 ```
 
-## Usage
+### Windows
+
+```powershell
+# 1. Install Python from https://python.org/downloads
+#    Check "Add Python to PATH" during installation!
+
+# 2. Install ffmpeg using Chocolatey (run PowerShell as Admin):
+choco install ffmpeg
+
+# OR using Scoop:
+scoop install ffmpeg
+
+# OR download manually from https://ffmpeg.org/download.html
+# and add to PATH
+
+# 3. Clone repository
+git clone https://github.com/smoreg/biLangGen.git
+cd biLangGen
+
+# 4. Install Python dependencies
+pip install -r requirements.txt
+```
+
+### Linux (Ubuntu/Debian)
+
+```bash
+# Install dependencies
+sudo apt update
+sudo apt install python3 python3-pip ffmpeg rubberband-cli
+
+# Clone repository
+git clone https://github.com/smoreg/biLangGen.git
+cd biLangGen
+
+# Install Python dependencies
+pip3 install -r requirements.txt
+```
+
+## Quick Start
+
+1. Create a text file `book.txt` with your text (UTF-8 encoding)
+
+2. Run the generator:
+```bash
+# macOS/Linux
+python3 main.py -i book.txt -o audiobook.mp3 -s ru -t es
+
+# Windows
+python main.py -i book.txt -o audiobook.mp3 -s ru -t es
+```
+
+3. Open `audiobook.mp3` and enjoy!
+
+## Usage Examples
 
 ```bash
 # Basic: Russian → Spanish
@@ -36,14 +100,17 @@ python3 main.py -i book.txt -o audiobook.mp3 -s ru -t es
 # With speed adjustment (1.5x for Russian, 1x for Spanish)
 python3 main.py -i book.txt -o audiobook.mp3 -s ru -t es --speed "ru:1.5,es:1.0"
 
-# Multiple target languages
+# Multiple target languages (Russian → English, Spanish)
 python3 main.py -i book.txt -o audiobook.mp3 -s ru -t en,es
 
-# Custom pauses
+# Custom pauses (longer pauses)
 python3 main.py -i book.txt -o audiobook.mp3 -s ru -t es --pause 800 --sentence-pause 1200
 
 # Use DeepL for better translation quality
 python3 main.py -i book.txt -o audiobook.mp3 -s ru -t es --translator deepl-free
+
+# Offline TTS (no internet required for audio, but still needs internet for translation)
+python3 main.py -i book.txt -o audiobook.mp3 -s ru -t es --tts pyttsx3
 ```
 
 ## CLI Options
@@ -64,13 +131,19 @@ python3 main.py -i book.txt -o audiobook.mp3 -s ru -t es --translator deepl-free
 ## Providers
 
 ### Translation
-- **Google** (default) - Free, unlimited*, good quality
-- **DeepL Free** - 500K chars/month, excellent quality
-- **DeepL Pro** - Paid, excellent quality, higher limits
+| Provider | Quality | Free Limit | Best For |
+|----------|---------|------------|----------|
+| **Google** (default) | Good | Unlimited* | Daily use |
+| **DeepL Free** | Excellent | 500K chars/month | Best quality |
+| **DeepL Pro** | Excellent | Paid | Large volumes |
 
-### TTS
-- **gTTS** (default) - Free, online, good quality
-- **pyttsx3** - Free, offline, basic quality
+*Google through unofficial API may have rate limits
+
+### TTS (Text-to-Speech)
+| Provider | Quality | Internet | Best For |
+|----------|---------|----------|----------|
+| **gTTS** (default) | Good | Required | Most cases |
+| **pyttsx3** | Basic | Not required | Offline use |
 
 ## Rate Limiting
 
@@ -79,6 +152,33 @@ Built-in protection against API blocks:
 - Exponential backoff retries (up to 5 attempts)
 - Preventive pauses every 100 requests
 - Translation caching to reduce API calls
+
+### Recommended limits
+| Text Size | Status |
+|-----------|--------|
+| Short story (5-10 pages) | Works great |
+| Novel (50-100 pages) | Should work, takes 10-30 min |
+| Long book (300+ pages) | Split into parts recommended |
+
+## Troubleshooting
+
+### "ffmpeg not found"
+Make sure ffmpeg is installed and in your PATH:
+```bash
+ffmpeg -version
+```
+
+### Speed control not working
+Install rubberband:
+- macOS: `brew install rubberband`
+- Linux: `sudo apt install rubberband-cli`
+- Windows: Speed control uses ffmpeg (already installed)
+
+### Rate limit errors
+The tool will automatically retry with backoff. For large texts, consider:
+- Using `--translator deepl-free` (500K chars/month free)
+- Splitting text into smaller files
+- Running during off-peak hours
 
 ## Project Structure
 
