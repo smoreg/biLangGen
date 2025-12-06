@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Audio files (generated)
+*.mp3
+*.wav
+
+# Temp directories
+.temp_audio/
+
+# Cache
+.translation_cache.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files
+test_*.txt

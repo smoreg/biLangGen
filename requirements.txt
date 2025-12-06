@@ -1,0 +1,20 @@
+# Core
+click>=8.0
+pydub>=0.25
+nltk>=3.8
+
+# Translation
+deep-translator>=1.11
+
+# TTS
+gTTS>=2.5
+pyttsx3>=2.90
+
+# Audio processing (for speed change without pitch shift)
+pyrubberband>=0.3.0
+
+# Note: System dependencies required:
+# - ffmpeg (for pydub audio processing)
+# - rubberband-cli (for pitch-preserving speed change)
+#   macOS: brew install rubberband
+#   Ubuntu: apt install rubberband-cli
