@@ -19,7 +19,7 @@ class Config:
     cache_file: str = ".translation_cache.json"
 
     # TTS
-    tts_provider: str = "gtts"  # gtts, pyttsx3, cloud
+    tts_provider: str = "google_cloud"  # gtts, pyttsx3, google_cloud
 
     # Audio
     pause_between_langs_ms: int = 500
@@ -46,4 +46,4 @@ LANG_CODES = {
 TRANSLATORS = ["google", "deepl-free", "deepl-pro"]
 
 # Supported TTS providers
-TTS_PROVIDERS = ["gtts", "pyttsx3"]
+TTS_PROVIDERS = ["gtts", "pyttsx3", "google_cloud"]

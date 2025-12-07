@@ -69,6 +69,7 @@ class WordFrequencyAnalyzer:
         self,
         sentence: str,
         max_words: int = 3,
+        min_words: int = 2,
     ) -> list[tuple[str, float]]:
         """
         Get rarest words from sentence.
@@ -76,12 +77,16 @@ class WordFrequencyAnalyzer:
         Args:
             sentence: Input sentence
             max_words: Maximum number of rare words to return
+            min_words: Minimum number of words to return (even if not rare)
 
         Returns:
             List of (word, zipf_score) tuples, sorted by rarity (rarest first)
         """
         words = self.extract_words(sentence)
-        word_scores = []
+
+        # Collect all valid words with scores
+        all_word_scores = []
+        rare_word_scores = []
 
         for word in words:
             if len(word) < 3:
@@ -92,21 +97,34 @@ class WordFrequencyAnalyzer:
                 continue
 
             score = self.get_zipf_score(word)
-            if 0 < score < self.zipf_threshold:
-                word_scores.append((word, score))
+            if score > 0:
+                all_word_scores.append((word, score))
+                if score < self.zipf_threshold:
+                    rare_word_scores.append((word, score))
 
         # Sort by score (ascending = rarest first)
-        word_scores.sort(key=lambda x: x[1])
+        rare_word_scores.sort(key=lambda x: x[1])
+        all_word_scores.sort(key=lambda x: x[1])
 
         # Remove duplicates while preserving order
-        seen = set()
-        unique = []
-        for word, score in word_scores:
-            if word.lower() not in seen:
-                seen.add(word.lower())
-                unique.append((word, score))
+        def dedupe(word_scores):
+            seen = set()
+            unique = []
+            for word, score in word_scores:
+                if word.lower() not in seen:
+                    seen.add(word.lower())
+                    unique.append((word, score))
+            return unique
 
-        return unique[:max_words]
+        unique_rare = dedupe(rare_word_scores)
+
+        # If we have enough rare words, return them
+        if len(unique_rare) >= min_words:
+            return unique_rare[:max_words]
+
+        # Otherwise, fill with least common words (even if above threshold)
+        unique_all = dedupe(all_word_scores)
+        return unique_all[:max_words]
 
 
 def get_rare_words(
@@ -130,3 +148,57 @@ def get_rare_words(
     analyzer = WordFrequencyAnalyzer(language=lang, zipf_threshold=zipf_threshold)
     rare = analyzer.get_rare_words(sentence, max_words)
     return [word for word, _ in rare]
+
+
+def get_rare_words_with_translations(
+    source_sentence: str,
+    target_sentence: str,
+    source_lang: str,
+    target_lang: str,
+    max_words: int = 5,
+    zipf_threshold: float = 4.5,
+    translator=None,
+) -> list[tuple[str, str]]:
+    """
+    Get rare words from target sentence with translations to source language.
+    Uses cached dictionary to avoid repeated API calls.
+
+    Args:
+        source_sentence: Sentence in source language
+        target_sentence: Sentence in target language
+        source_lang: Source language code
+        target_lang: Target language code
+        max_words: Maximum number of words to return
+        zipf_threshold: Rarity threshold
+        translator: Optional Translator instance for uncached words
+
+    Returns:
+        List of (target_word, source_translation) tuples
+    """
+    from .word_dictionary import get_dictionary
+
+    # Get rare words from target (learner's target language)
+    target_analyzer = WordFrequencyAnalyzer(language=target_lang, zipf_threshold=zipf_threshold)
+    rare_target = target_analyzer.get_rare_words(target_sentence, max_words * 2)
+
+    # Get dictionary (with cache)
+    dictionary = get_dictionary()
+
+    # Create translator if not provided (for uncached words)
+    if translator is None:
+        try:
+            from core.translator import Translator
+            translator = Translator()
+        except ImportError:
+            translator = None
+
+    result = []
+    for target_word, _ in rare_target:
+        # Use dictionary (checks cache first, then translates if needed)
+        translation = dictionary.translate(target_word, target_lang, source_lang, translator)
+        result.append((target_word, translation))
+
+        if len(result) >= max_words:
+            break
+
+    return result

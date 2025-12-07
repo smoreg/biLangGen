@@ -86,7 +86,7 @@ class Translator:
         Initialize translator.
 
         Args:
-            provider: Translation provider (google, deepl-free, deepl-pro)
+            provider: Translation provider (google, deepl-free, deepl-pro, argos)
             cache_enabled: Enable translation caching
             cache_file: Path to cache file
             deepl_api_key: DeepL API key (for deepl-pro)
@@ -109,8 +109,19 @@ class Translator:
             from providers.translation.deepl_pro import DeepLProTranslator
 
             return DeepLProTranslator(api_key=api_key)
+        elif provider == "argos":
+            from providers.translation.argos_local import ArgosLocalTranslator
+
+            return ArgosLocalTranslator()
+        elif provider == "openai" or provider == "gpt":
+            from providers.translation.openai_gpt import OpenAIGPTTranslator
+
+            return OpenAIGPTTranslator(api_key=api_key)
         else:
-            raise ValueError(f"Unknown translator provider: {provider}")
+            raise ValueError(
+                f"Unknown translator provider: {provider}. "
+                "Available: google, deepl-free, deepl-pro, argos, openai"
+            )
 
     def translate(self, text: str, source_lang: str, target_lang: str) -> str:
         """

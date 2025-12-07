@@ -1,10 +1,14 @@
 """Text-to-Speech abstraction layer."""
 
-import os
-import tempfile
+import hashlib
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional
+
+
+def deterministic_hash(text: str) -> str:
+    """Create deterministic hash for text (unlike Python's hash())."""
+    return hashlib.md5(text.encode('utf-8')).hexdigest()[:12]
 
 
 class BaseTTS(ABC):
@@ -66,6 +70,10 @@ class TTSEngine:
             from providers.tts.pyttsx3_provider import Pyttsx3Provider
 
             return Pyttsx3Provider()
+        elif provider == "google_cloud":
+            from providers.tts.google_cloud_provider import GoogleCloudTTSProvider
+
+            return GoogleCloudTTSProvider()
         else:
             raise ValueError(f"Unknown TTS provider: {provider}")
 
@@ -82,10 +90,9 @@ class TTSEngine:
             Path to audio file
         """
         if output_path is None:
-            # Generate temp file path
-            output_path = str(
-                self.temp_dir / f"tts_{hash(text + language) & 0xFFFFFFFF}.mp3"
-            )
+            # Generate temp file path using deterministic hash
+            text_hash = deterministic_hash(text + language)
+            output_path = str(self.temp_dir / f"tts_{text_hash}.mp3")
 
         success = self._tts.synthesize(text, language, output_path)
         if not success:

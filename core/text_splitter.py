@@ -4,6 +4,14 @@ import re
 from typing import Optional
 
 try:
+    import ssl
+    import certifi
+    # Fix SSL certificate verification for NLTK downloads
+    ssl._create_default_https_context = lambda: ssl.create_default_context(cafile=certifi.where())
+except ImportError:
+    pass
+
+try:
     import nltk
     from nltk.tokenize import sent_tokenize
 
@@ -19,6 +27,35 @@ NLTK_LANG_MAP = {
     "es": "spanish",
 }
 
+# Abbreviations that should NOT end sentences (per language)
+ABBREVIATIONS = {
+    "en": [
+        "Mr.", "Mrs.", "Ms.", "Dr.", "Prof.", "Jr.", "Sr.", "vs.", "etc.",
+        "i.e.", "e.g.", "Inc.", "Ltd.", "Co.", "Corp.", "Ave.", "St.", "Rd.",
+        "Mt.", "ft.", "oz.", "lb.", "Jan.", "Feb.", "Mar.", "Apr.", "Jun.",
+        "Jul.", "Aug.", "Sep.", "Oct.", "Nov.", "Dec.", "Rev.", "Gen.", "Col.",
+        "Lt.", "Sgt.", "Capt.", "Cmdr.", "Adm.", "Ph.D.", "M.D.", "B.A.", "M.A.",
+    ],
+    "ru": [
+        "г.", "гг.", "т.д.", "т.п.", "т.е.", "др.", "пр.", "ул.", "д.", "кв.",
+        "им.", "проф.", "доц.", "канд.", "акад.", "чл.", "корр.", "ред.", "изд.",
+        "см.", "ср.", "напр.", "п.", "пп.", "ч.", "с.", "стр.", "рис.", "табл.",
+        "млн.", "млрд.", "тыс.", "руб.", "коп.", "м.", "км.", "кг.", "гр.",
+    ],
+    "es": [
+        "Sr.", "Sra.", "Srta.", "Dr.", "Dra.", "Prof.", "Ud.", "Uds.", "etc.",
+        "Lic.", "Ing.", "Arq.", "Abog.", "Mtro.", "Mtra.", "Pbro.", "Mons.",
+        "Gral.", "Cnel.", "Cap.", "Tte.", "Sgt.", "pág.", "págs.", "vol.",
+        "núm.", "tel.", "fax.", "aprox.", "máx.", "mín.", "prom.",
+    ],
+}
+
+# Compiled regex for single-letter initials (A. B. C.)
+# Matches: SINGLE uppercase letter (not preceded by another letter) followed by period
+# Does NOT match words like "Ул." or "Dr." - those are abbreviations
+# Only matches patterns like "A. " or "А. " where the letter stands alone
+INITIAL_PATTERN = re.compile(r'(?<![A-ZА-ЯЁa-zа-яё])([A-ZА-ЯЁ])\.(\s*)(?=[A-ZА-ЯЁa-zа-яё])')
+
 
 class TextSplitter:
     """Splits text into sentences."""
@@ -31,7 +68,15 @@ class TextSplitter:
             language: Language code (ru, en, es)
         """
         self.language = language
+        self.abbreviations = ABBREVIATIONS.get(language, [])
         self._ensure_nltk_data()
+
+        # Pre-compile abbreviation patterns for this language
+        self._abbr_patterns = []
+        for abbr in self.abbreviations:
+            # Escape special chars and create pattern
+            escaped = re.escape(abbr)
+            self._abbr_patterns.append((abbr, f"_ABBR_{abbr.replace('.', '_DOT_')}_"))
 
     def _ensure_nltk_data(self) -> None:
         """Download required NLTK data if not present."""
@@ -54,20 +99,73 @@ class TextSplitter:
         Returns:
             List of sentences
         """
-        # Clean text first
-        text = self._clean_text(text)
-
         if not text:
             return []
 
-        # Try NLTK first
-        if NLTK_AVAILABLE:
-            sentences = self._split_nltk(text)
-        else:
-            sentences = self._split_regex(text)
+        # First, split by dialogue markers (new line + em-dash)
+        # This handles Russian dialogue format where each "— " starts new speech
+        paragraphs = self._split_dialogues(text)
+
+        all_sentences = []
+        for para in paragraphs:
+            # Clean paragraph
+            para = self._clean_text(para)
+            if not para:
+                continue
+
+            # Try NLTK first
+            if NLTK_AVAILABLE:
+                sentences = self._split_nltk(para)
+            else:
+                sentences = self._split_regex(para)
+
+            all_sentences.extend(sentences)
 
         # Post-process
-        return [s.strip() for s in sentences if s.strip()]
+        return [s.strip() for s in all_sentences if s.strip()]
+
+    def _protect_abbreviations(self, text: str) -> str:
+        """Replace abbreviations with placeholders to prevent sentence splitting."""
+        protected = text
+
+        # Protect single-letter initials first (A. B. Smith, А. С. Пушкин)
+        # Replace "A. " with "A_INIT_ " to preserve spacing
+        # \1 = letter, \2 = space (if any)
+        protected = INITIAL_PATTERN.sub(r'\1_INIT_\2', protected)
+
+        # Protect known abbreviations
+        for abbr, placeholder in self._abbr_patterns:
+            protected = protected.replace(abbr, placeholder)
+
+        return protected
+
+    def _restore_abbreviations(self, text: str) -> str:
+        """Restore abbreviations from placeholders."""
+        restored = text
+
+        # Restore initials
+        restored = restored.replace('_INIT_', '.')
+
+        # Restore abbreviations
+        for abbr, placeholder in self._abbr_patterns:
+            restored = restored.replace(placeholder, abbr)
+
+        return restored
+
+    def _split_dialogues(self, text: str) -> list[str]:
+        """Split text by dialogue markers (newline + em-dash or hyphen)."""
+        # Split on newline followed by em-dash "—" or hyphen "-" (dialogue start)
+        # Pattern: newline + optional whitespace + em-dash/hyphen
+        # Improved pattern: handles both "—" (em-dash) and "- " (hyphen-space)
+        parts = re.split(r'\n\s*(?=[—–-]\s)', text)
+
+        result = []
+        for part in parts:
+            # Also split on double newlines (paragraphs)
+            subparts = re.split(r'\n\s*\n', part)
+            result.extend(subparts)
+
+        return [p.strip() for p in result if p.strip()]
 
     def _clean_text(self, text: str) -> str:
         """Clean and normalize text."""
@@ -80,8 +178,14 @@ class TextSplitter:
     def _split_nltk(self, text: str) -> list[str]:
         """Split using NLTK sent_tokenize."""
         nltk_lang = NLTK_LANG_MAP.get(self.language, "english")
+
+        # Protect abbreviations and initials before splitting
+        protected = self._protect_abbreviations(text)
+
         try:
-            return sent_tokenize(text, language=nltk_lang)
+            sentences = sent_tokenize(protected, language=nltk_lang)
+            # Restore abbreviations in results
+            return [self._restore_abbreviations(s) for s in sentences]
         except Exception:
             # Fallback to regex if NLTK fails
             return self._split_regex(text)
@@ -94,13 +198,10 @@ class TextSplitter:
         - Standard punctuation (. ! ?)
         - Ellipsis
         - Russian and English text
+        - Abbreviations and initials
         """
-        # Simple approach: split on . ! ? followed by space and capital letter
-        # First, protect common abbreviations by replacing them temporarily
-        protected = text
-        abbreviations = ["Mr.", "Mrs.", "Ms.", "Dr.", "Prof.", "Sr.", "Jr.", "vs.", "etc.", "i.e.", "e.g."]
-        for i, abbr in enumerate(abbreviations):
-            protected = protected.replace(abbr, f"__ABBR{i}__")
+        # Protect abbreviations and initials
+        protected = self._protect_abbreviations(text)
 
         # Split on sentence boundaries
         # Match: period/exclamation/question + space(s) + capital letter (Latin or Cyrillic)
@@ -118,14 +219,8 @@ class TextSplitter:
                     sentences.append(parts[i])
                 i += 1
 
-        # Restore abbreviations
-        result = []
-        for sent in sentences:
-            for i, abbr in enumerate(abbreviations):
-                sent = sent.replace(f"__ABBR{i}__", abbr)
-            result.append(sent)
-
-        return result
+        # Restore abbreviations in results
+        return [self._restore_abbreviations(s) for s in sentences]
 
 
 def split_text(text: str, language: str = "en") -> list[str]:

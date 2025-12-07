@@ -36,6 +36,11 @@ Thumbs.db
 # Test files
 test_*.txt
 
-# Claude
-CLAUDE.md
-.claude/
+# Generated projects (large files)
+projects/
+
+# Source texts (may contain copyrighted content)
+txt_source/
+
+# Word cache
+.word_cache/
