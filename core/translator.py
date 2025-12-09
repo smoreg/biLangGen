@@ -81,6 +81,7 @@ class Translator:
         cache_enabled: bool = True,
         cache_file: str = ".translation_cache.json",
         deepl_api_key: Optional[str] = None,
+        translate_context: Optional[str] = None,
     ):
         """
         Initialize translator.
@@ -90,12 +91,16 @@ class Translator:
             cache_enabled: Enable translation caching
             cache_file: Path to cache file
             deepl_api_key: DeepL API key (for deepl-pro)
+            translate_context: Context for OpenAI translator (book name, genre, etc.)
         """
         self.provider_name = provider
-        self._translator = self._create_translator(provider, deepl_api_key)
+        self.translate_context = translate_context
+        self._translator = self._create_translator(provider, deepl_api_key, translate_context)
         self._cache = TranslationCache(cache_file) if cache_enabled else None
 
-    def _create_translator(self, provider: str, api_key: Optional[str] = None) -> BaseTranslator:
+    def _create_translator(
+        self, provider: str, api_key: Optional[str] = None, translate_context: Optional[str] = None
+    ) -> BaseTranslator:
         """Create translator instance based on provider."""
         if provider == "google":
             from providers.translation.google_free import GoogleFreeTranslator
@@ -116,11 +121,15 @@ class Translator:
         elif provider == "openai" or provider == "gpt":
             from providers.translation.openai_gpt import OpenAIGPTTranslator
 
-            return OpenAIGPTTranslator(api_key=api_key)
+            return OpenAIGPTTranslator(api_key=api_key, translate_context=translate_context)
+        elif provider == "gemini":
+            from providers.translation.gemini_gpt import GeminiTranslator
+
+            return GeminiTranslator(api_key=api_key)
         else:
             raise ValueError(
                 f"Unknown translator provider: {provider}. "
-                "Available: google, deepl-free, deepl-pro, argos, openai"
+                "Available: google, deepl-free, deepl-pro, argos, openai, gemini"
             )
 
     def translate(self, text: str, source_lang: str, target_lang: str) -> str:
@@ -155,7 +164,8 @@ class Translator:
         return translation
 
     def translate_batch(
-        self, texts: list[str], source_lang: str, target_lang: str
+        self, texts: list[str], source_lang: str, target_lang: str,
+        show_progress: bool = True
     ) -> list[str]:
         """
         Translate multiple texts.
@@ -164,8 +174,15 @@ class Translator:
             texts: List of texts to translate
             source_lang: Source language code
             target_lang: Target language code
+            show_progress: Show progress bar
 
         Returns:
             List of translated texts
         """
+        # Delegate to provider's batch method if it has one
+        if hasattr(self._translator, 'translate_batch'):
+            return self._translator.translate_batch(
+                texts, source_lang, target_lang, show_progress=show_progress
+            )
+        # Fallback to sequential
         return [self.translate(text, source_lang, target_lang) for text in texts]

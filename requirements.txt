@@ -5,6 +5,7 @@ nltk>=3.8
 
 # Translation
 deep-translator>=1.11
+google-generativeai>=0.8.0  # Gemini API
 
 # TTS
 gTTS>=2.5

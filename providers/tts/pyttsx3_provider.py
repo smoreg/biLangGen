@@ -3,10 +3,14 @@
 from pathlib import Path
 
 from core.tts_engine import BaseTTS
+from core.languages import RUSSIAN, ENGLISH, SPANISH, SPANISH_LATAM
 
 
 class Pyttsx3Provider(BaseTTS):
     """Offline TTS using pyttsx3 with espeak-ng backend."""
+
+    # Supported languages (espeak-ng doesn't distinguish LatAm)
+    SUPPORTED_LANGS = [RUSSIAN.code, ENGLISH.code, SPANISH.code, SPANISH_LATAM.code]
 
     def __init__(self):
         import pyttsx3
@@ -19,8 +23,7 @@ class Pyttsx3Provider(BaseTTS):
         return "pyttsx3 (Offline)"
 
     def supported_languages(self) -> list[str]:
-        # espeak-ng supports many languages
-        return ["ru", "en", "es"]
+        return self.SUPPORTED_LANGS
 
     def synthesize(self, text: str, language: str, output_path: str) -> bool:
         """

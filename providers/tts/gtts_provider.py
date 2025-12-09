@@ -7,14 +7,16 @@ from gtts import gTTS
 from gtts.tts import gTTSError
 
 from core.tts_engine import BaseTTS
+from core.languages import RUSSIAN, ENGLISH, SPANISH, SPANISH_LATAM, get_language
 from utils.rate_limiter import RateLimiter
 
 
-# gTTS language mapping
+# gTTS language mapping (gTTS uses base language codes)
 GTTS_LANG_MAP = {
-    "ru": "ru",
-    "en": "en",
-    "es": "es",
+    RUSSIAN.code: "ru",
+    ENGLISH.code: "en",
+    SPANISH.code: "es",
+    SPANISH_LATAM.code: "es",  # gTTS doesn't distinguish LatAm
 }
 
 
@@ -57,7 +59,7 @@ class GTTSProvider(BaseTTS):
         return "Google TTS (gTTS)"
 
     def supported_languages(self) -> list[str]:
-        return ["ru", "en", "es"]
+        return list(GTTS_LANG_MAP.keys())
 
     def synthesize(self, text: str, language: str, output_path: str) -> bool:
         """

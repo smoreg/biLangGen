@@ -17,7 +17,7 @@ Multilingual audiobook and video generator. Converts text into audio/video with 
 ### Video Generation
 - Karaoke-style subtitles (word highlighting during playback)
 - Rare word cards with translations (1-3 words per sentence)
-- Word frequency analysis to identify rare/useful vocabulary
+- Word frequency analysis to ideещеntify rare/useful vocabulary
 - Customizable backgrounds (solid color or image)
 - AI-generated backgrounds from text content (via Pollinations.ai)
 - MP4 output optimized for YouTube

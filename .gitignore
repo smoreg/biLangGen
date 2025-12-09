@@ -44,3 +44,34 @@ txt_source/
 
 # Word cache
 .word_cache/
+.env
+
+# YouTube OAuth secrets
+client_secrets.json
+.youtube_token.json
+
+# Database files
+*.db
+
+# Source text files
+*.txt
+txt_source_en/
+
+# Images and thumbnails
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+thumbnails/
+
+# Generated samples
+generated_samples/
+
+# Analysis output
+*.json
+!package.json
+!tsconfig.json
+
+# Project data
+project/

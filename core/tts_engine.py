@@ -74,6 +74,10 @@ class TTSEngine:
             from providers.tts.google_cloud_provider import GoogleCloudTTSProvider
 
             return GoogleCloudTTSProvider()
+        elif provider == "openai":
+            from providers.tts.openai_provider import OpenAITTSProvider
+
+            return OpenAITTSProvider()
         else:
             raise ValueError(f"Unknown TTS provider: {provider}")
 

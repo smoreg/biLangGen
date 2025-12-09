@@ -1,17 +1,20 @@
 """DeepL Free provider using deep-translator."""
 
+import os
 import time
 
 from deep_translator import DeeplTranslator
 
 from core.translator import BaseTranslator
+from core.languages import RUSSIAN, ENGLISH, SPANISH, SPANISH_LATAM
 
 
-# DeepL language code mapping
+# DeepL language code mapping (DeepL uses base codes)
 DEEPL_LANG_MAP = {
-    "ru": "ru",
-    "en": "en",
-    "es": "es",
+    RUSSIAN.code: "ru",
+    ENGLISH.code: "en",
+    SPANISH.code: "es",
+    SPANISH_LATAM.code: "es",  # DeepL doesn't distinguish LatAm
 }
 
 
@@ -60,7 +63,9 @@ class DeepLFreeTranslator(BaseTranslator):
             src = DEEPL_LANG_MAP.get(source_lang, source_lang)
             tgt = DEEPL_LANG_MAP.get(target_lang, target_lang)
 
+            api_key = os.environ.get("DEEPL_API_KEY")
             translator = DeeplTranslator(
+                api_key=api_key,
                 source=src,
                 target=tgt,
                 use_free_api=True,
