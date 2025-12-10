@@ -405,7 +405,6 @@ def _encode_video_chunk(args: Tuple) -> Tuple[int, Path]:
             "-vf", (
                 f"scale={width}:{height}:force_original_aspect_ratio=increase,"
                 f"crop={width}:{height},"
-                f"eq=brightness=-0.2:saturation=0.8,"
                 f"fps={fps},"
                 f"ass={chunk_ass}"
             ),

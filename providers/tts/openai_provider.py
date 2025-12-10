@@ -67,7 +67,7 @@ class OpenAITTSProvider(BaseTTS):
     - shimmer: Female, expressive
     """
 
-    def __init__(self, api_key: str = None, model: str = "tts-1", voice: str = "echo"):
+    def __init__(self, api_key: str = None, model: str = "gpt-4o-mini-tts", voice: str = "echo"):
         """
         Initialize OpenAI TTS.
 
